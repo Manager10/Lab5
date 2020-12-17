@@ -13,18 +13,14 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import javax.swing.AbstractAction;
-import javax.swing.Action;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
+import javax.swing.*;
 
 public class MainFrame extends JFrame {
     private static final int WIDTH = 700;
     private static final int HEIGHT = 500;
+    private JCheckBoxMenuItem showAxisMenuItem;
+    private JCheckBoxMenuItem showMarkersMenuItem;
+    private JCheckBoxMenuItem showDivisionsMenuItem;
     private JFileChooser fileChooser = null;
     private JMenuItem resetGraphicsMenuItem;
     private GraphicsDisplay display = new GraphicsDisplay();
@@ -39,6 +35,8 @@ public class MainFrame extends JFrame {
         JMenuBar menuBar = new JMenuBar();
         this.setJMenuBar(menuBar);
         JMenu fileMenu = new JMenu("Файл");
+        JMenu graphicsMenu = new JMenu("График");
+        menuBar.add(graphicsMenu);
         menuBar.add(fileMenu);
         Action openGraphicsAction = new AbstractAction("Открыть файл с графиком") {
             public void actionPerformed(ActionEvent event) {
@@ -57,6 +55,47 @@ public class MainFrame extends JFrame {
                 MainFrame.this.display.reset();
             }
         };
+
+        Action showAxisAction = new AbstractAction("Показывать оси координат")
+        {
+            public void actionPerformed(ActionEvent event)
+            {
+                // свойство showAxis класса GraphicsDisplay истина, если элемент меню
+                // showAxisMenuItem отмечен флажком, и ложь - в противном случае
+                display.setShowAxis(showAxisMenuItem.isSelected());
+            }
+        };
+
+        showAxisMenuItem = new JCheckBoxMenuItem(showAxisAction);
+        graphicsMenu.add(showAxisMenuItem);
+        // Элемент по умолчанию включен (отмечен флажком)
+        showAxisMenuItem.setSelected(true);
+        // Повторить действия для элемента "Показывать маркеры точек"
+        Action showMarkersAction = new AbstractAction("Показывать маркеры точек")
+        {
+            public void actionPerformed(ActionEvent event)
+            {
+                // по аналогии с showAxisMenuItem
+                display.setShowMarkers(showMarkersMenuItem.isSelected());
+            }
+        };
+
+        showMarkersMenuItem = new JCheckBoxMenuItem(showMarkersAction);
+        graphicsMenu.add(showMarkersMenuItem);
+        // Элемент по умолчанию включен (отмечен флажком)
+        showMarkersMenuItem.setSelected(true);
+
+        Action showDivisionsAction = new AbstractAction("Показывать деления на осях")
+        {
+            public void actionPerformed(ActionEvent event)
+            {
+                display.setShowDivisions(showDivisionsMenuItem.isSelected());
+            }
+        };
+        showDivisionsMenuItem = new JCheckBoxMenuItem(showDivisionsAction);
+        graphicsMenu.add(showDivisionsMenuItem);
+        showDivisionsMenuItem.setSelected(true);
+
         this.resetGraphicsMenuItem = fileMenu.add(resetGraphicsAction);
         this.resetGraphicsMenuItem.setEnabled(false);
         this.getContentPane().add(this.display, "Center");

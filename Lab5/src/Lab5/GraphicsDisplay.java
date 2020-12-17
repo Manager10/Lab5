@@ -10,6 +10,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.awt.font.FontRenderContext;
+import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.text.DecimalFormat;
@@ -26,6 +27,9 @@ public class GraphicsDisplay extends JPanel {
     private double maxX;
     private double minY;
     private double maxY;
+    private boolean showAxis = true;
+    private boolean showMarkers = true;
+    private boolean showDivisions = true;
     private double[][] viewport = new double[2][2];
     private ArrayList<double[][]> undoHistory = new ArrayList(5);
     private double scaleX;
@@ -84,6 +88,21 @@ public class GraphicsDisplay extends JPanel {
         this.zoomToRegion(this.minX, this.maxY, this.maxX, this.minY);
     }
 
+    public void setShowAxis(boolean showAxis) {
+        this.showAxis = showAxis;
+        repaint();
+    }
+
+    public void setShowMarkers(boolean showMarkers) {
+        this.showMarkers = showMarkers;
+        repaint();
+    }
+
+    public void setShowDivisions(boolean showDivisions) {
+        this.showDivisions = showDivisions;
+        repaint();
+    }
+
     public void zoomToRegion(double x1, double y1, double x2, double y2) {
         this.viewport[0][0] = x1;
         this.viewport[0][1] = y1;
@@ -99,11 +118,12 @@ public class GraphicsDisplay extends JPanel {
         if (this.graphicsData != null && this.graphicsData.size() != 0) {
             Graphics2D canvas = (Graphics2D)g;
             this.paintGrid(canvas);
-            this.paintAxis(canvas);
             this.paintGraphics(canvas);
-            this.paintMarkers(canvas);
             this.paintLabels(canvas);
             this.paintSelection(canvas);
+            if (showAxis) paintAxis(canvas);
+            if (showMarkers) paintMarkers(canvas);
+            if (showDivisions) paintDivisions(canvas);
         }
     }
 
@@ -140,7 +160,7 @@ public class GraphicsDisplay extends JPanel {
         canvas.setStroke(this.markerStroke);
         canvas.setColor(Color.RED);
         canvas.setPaint(Color.RED);
-        java.awt.geom.Ellipse2D.Double lastMarker = null;
+        java.awt.geom.Rectangle2D.Double lastMarker = null;
         int i = -1;
         Iterator var5 = this.graphicsData.iterator();
 
@@ -150,21 +170,35 @@ public class GraphicsDisplay extends JPanel {
             if (point[0] >= this.viewport[0][0] && point[1] <= this.viewport[0][1] && point[0] <= this.viewport[1][0] && point[1] >= this.viewport[1][1]) {
                 byte radius;
                 if (i == this.selectedMarker) {
-                    radius = 6;
+                    radius = 8;
                 } else {
-                    radius = 3;
+                    radius = 6;
                 }
 
-                java.awt.geom.Ellipse2D.Double marker = new java.awt.geom.Ellipse2D.Double();
-                Point2D center = this.translateXYtoPoint(point[0], point[1]);
-                Point2D corner = new java.awt.geom.Point2D.Double(center.getX() + (double)radius, center.getY() + (double)radius);
+                java.awt.geom.Rectangle2D.Double marker = new java.awt.geom.Rectangle2D.Double();
+                Point2D.Double center = this.translateXYtoPoint(point[0], point[1]);
+                Point2D.Double corner = new java.awt.geom.Point2D.Double(center.getX() + (double)radius, center.getY() + (double)radius);
+                canvas.draw(new Line2D.Double(shiftPoint(center, -5.5, 5.5), shiftPoint(center, 5.5, -5.5)));
+                canvas.draw(new Line2D.Double(shiftPoint(center, 5.5, 5.5), shiftPoint(center, -5.5, -5.5)));
                 marker.setFrameFromCenter(center, corner);
+
                 if (i == this.selectedMarker) {
                     lastMarker = marker;
                 } else {
                     canvas.draw(marker);
                     canvas.fill(marker);
                 }
+
+                Rectangle2D.Double marker1 = new Rectangle2D.Double();
+                int temp1 = (int)(point[1] + 0.1);
+                if (((point[1] + 0.1) > temp1) && ((point[1] - 0.1) < temp1))
+                {
+                    corner = shiftPoint(center, 6.5, 6.5);
+                    marker1.setFrameFromCenter(center, corner);
+                    canvas.setPaint(Color.GREEN);
+                    canvas.fill(marker1);
+                }
+                canvas.setPaint(Color.RED);
             }
         }
 
@@ -173,6 +207,65 @@ public class GraphicsDisplay extends JPanel {
             canvas.setPaint(Color.BLUE);
             canvas.draw(lastMarker);
             canvas.fill(lastMarker);
+        }
+
+    }
+
+    protected void paintDivisions(Graphics2D canvas)
+    {
+        double stepX = (maxX - minX) / 100;
+        double stepY = (maxY - minY) / 100;
+        int count = 0;
+        canvas.setPaint(Color.BLACK);
+        for (double currentY = 0; currentY < maxY; currentY += stepY)
+        {
+            count++;
+            Point2D.Double center = translateXYtoPoint(0, currentY);
+            if (count % 5 == 0)
+            {
+                canvas.draw(new Line2D.Double(shiftPoint(center, -10, 0), shiftPoint(center, 10, 0)));
+            }
+            else
+                canvas.draw(new Line2D.Double(shiftPoint(center, -6, 0), shiftPoint(center, 6, 0)));
+        }
+
+        count = 0;
+        for (double currentY = 0; currentY > minY; currentY -= stepY)
+        {
+            count++;
+            Point2D.Double center = translateXYtoPoint(0, currentY);
+            if (count % 5 == 0)
+            {
+                canvas.draw(new Line2D.Double(shiftPoint(center, -10, 0), shiftPoint(center, 10, 0)));
+            }
+            else
+                canvas.draw(new Line2D.Double(shiftPoint(center, -6, 0), shiftPoint(center, 6, 0)));
+        }
+
+        count = 0;
+        for (double currentX = 0; currentX < maxX; currentX += stepX)
+        {
+            count++;
+            Point2D.Double center = translateXYtoPoint(currentX, 0);
+            if (count % 5 == 0)
+            {
+                canvas.draw(new Line2D.Double(shiftPoint(center, 0, -10), shiftPoint(center, 0, 10)));
+            }
+            else
+                canvas.draw(new Line2D.Double(shiftPoint(center, 0, -6), shiftPoint(center, 0, 6)));
+        }
+
+        count = 0;
+        for (double currentX = 0; currentX > minX; currentX -= stepX)
+        {
+            count++;
+            Point2D.Double center = translateXYtoPoint(currentX, 0);
+            if (count % 5 == 0)
+            {
+                canvas.draw(new Line2D.Double(shiftPoint(center, 0, -10), shiftPoint(center, 0, 10)));
+            }
+            else
+                canvas.draw(new Line2D.Double(shiftPoint(center, 0, -6), shiftPoint(center, 0, 6)));
         }
 
     }
@@ -404,5 +497,13 @@ public class GraphicsDisplay extends JPanel {
             }
 
         }
+    }
+    protected Point2D.Double shiftPoint(Point2D.Double src, double deltaX, double deltaY)
+    {
+// Инициализировать новый экземпляр точки
+        Point2D.Double dest = new Point2D.Double();
+// Задать еѐ координаты как координаты существующей точки + заданные смещения
+        dest.setLocation(src.getX() + deltaX, src.getY() + deltaY);
+        return dest;
     }
 }
